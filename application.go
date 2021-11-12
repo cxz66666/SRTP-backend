@@ -7,11 +7,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/gateway"
+	shell "github.com/ipfs/go-ipfs-api"
+	// This package is needed so that all the preloaded plugins are loaded automatically
 )
 
 func main() {
+	// hash, _ := uploadToIPFS("../../test1.txt")
+	// downloadFromIPFS(hash)
+
 	log.Println("============ application-golang starts ============")
 
 	err := os.Setenv("DISCOVERY_AS_LOCALHOST", "true")
@@ -73,6 +77,7 @@ func main() {
 	}
 	log.Println(string(result))
 	log.Println("============ application-golang ends ============")
+
 }
 
 func populateWallet(wallet *gateway.Wallet) error {
@@ -114,6 +119,43 @@ func populateWallet(wallet *gateway.Wallet) error {
 
 	identity := gateway.NewX509Identity("Org1MSP", string(cert), string(key))
 	return wallet.Put("appUser", identity)
+}
+
+var sh *shell.Shell
+
+func uploadToIPFS(filePath string) (string, error) {
+	sh = shell.NewShell("localhost:5001")
+	r, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	hash, err := sh.Add(r)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(hash)
+	return hash, nil
+}
+
+func downloadFromIPFS(hash string) error {
+	sh = shell.NewShell("localhost:5001")
+
+	read, err := sh.Cat(hash)
+	if err != nil {
+		panic(err)
+	}
+	body, err := ioutil.ReadAll(read)
+	if err != nil {
+		panic(err)
+	}
+	// print(body)
+	err = ioutil.WriteFile(hash, body, 0666)
+	if err != nil {
+		panic(err)
+	}
+	print("Fetch success! File is store in ", hash)
+	return nil
 }
 
 /*
